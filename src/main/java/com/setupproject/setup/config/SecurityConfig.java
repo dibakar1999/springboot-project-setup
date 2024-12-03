@@ -38,6 +38,7 @@ public class SecurityConfig {
                         authorizeRequests
                                 .requestMatchers("auth/login", "register")
                                 .permitAll()
+                                .requestMatchers("/ping").hasRole("USER")
                                 .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .sessionManagement(sessionMgmt -> sessionMgmt.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

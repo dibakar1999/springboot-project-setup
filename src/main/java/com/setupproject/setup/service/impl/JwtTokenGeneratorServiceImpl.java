@@ -5,6 +5,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +16,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @Author Dibakar Chaudhary
@@ -35,16 +39,17 @@ public class JwtTokenGeneratorServiceImpl implements JwtTokenGeneratorService {
     }
 
     @Override
-    public String generateToken(String username) {
+    public String generateToken(UserDetails userDetails) {
         HashMap<String, Object> claims = new HashMap<>();
-        claims.put("username", username);
+        claims.put("username", userDetails.getUsername());
+        claims.put("roles", userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
-                .setIssuer(username)
+                .setSubject(userDetails.getUsername())
+                .setIssuer(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000)) //10 min
+                .setExpiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000)) //10 min exp time
                 .signWith(this.getKey())
                 .compact();
     }
@@ -77,6 +82,13 @@ public class JwtTokenGeneratorServiceImpl implements JwtTokenGeneratorService {
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractClaims(token, Claims::getSubject);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    @Override
+    public List<SimpleGrantedAuthority> extractRoles(String token) {
+        Claims claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
+        List<String> roles = claims.get("roles", List.class);
+        return roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
     }
 
     private boolean isTokenExpired(String token) {
