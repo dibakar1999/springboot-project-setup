@@ -1,2 +1,4 @@
 # springboot-project-setup
-Project setup(Spring Boot) 
+Project setup.
+spring security with JWT token.
+
